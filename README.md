@@ -1,6 +1,6 @@
 # buyingunits
 
-Automated buying-unit mapping for enterprise software sales. A [Claude Code](https://claude.com/claude-code) skill that discovers subsidiaries, brands, divisions, acquisitions, and other buying units for any company, maps product fit, and persists results to Neon Postgres.
+Automated buying-unit mapping for enterprise software sales. A [Claude Code](https://claude.com/claude-code) skill that discovers subsidiaries, brands, divisions, acquisitions, and other buying units for any company and persists results to Neon Postgres.
 
 ## What It Does
 
@@ -8,12 +8,10 @@ Enterprise software companies sell to large accounts that appear as a single "lo
 
 This skill automates mapping the full buying-unit landscape:
 
-1. **First-run setup** — Identifies your software company and researches your product portfolio for product-fit mapping
-2. **Research mode** — For any target company, queries SEC EDGAR, GLEIF, Financial Modeling Prep, and web sources to discover all buying units
-3. **Hierarchy building** — Deduplicates, classifies, and builds parent-child relationships
-4. **Product-fit mapping** — Maps each buying unit against your product portfolio with relevance scores
-5. **Interactive review** — Presents findings for user confirmation, editing, and customer-status tagging
-6. **Query/dashboard mode** — Analyze saved data, generate CSV exports and HTML reports
+1. **Research** — For any target company, queries SEC EDGAR, GLEIF, Financial Modeling Prep, and web sources to discover all buying units
+2. **Hierarchy building** — Deduplicates, classifies, and builds parent-child relationships
+3. **Interactive review** — Presents findings for user confirmation, editing, and customer-status tagging
+4. **Query/dashboard mode** — Analyze saved data, generate CSV exports and HTML reports
 
 ## Data Sources
 
@@ -73,18 +71,14 @@ map Nike's org structure
 which prospects have the most buying units?
 show me all buying units with VAT exposure
 coverage gap analysis
-which buying units are best fit for tax calculation?
 ```
 
 ## Database
 
 Uses Neon Serverless Postgres with the following tables:
 
-- `software_company` — Your company identity
-- `software_products` — Your product portfolio
 - `companies` — Target/prospect companies
 - `buying_units` — Discovered buying units with enrichment
-- `product_fit` — Product-to-buying-unit relevance mapping
 - `review_actions` — Audit trail of user review decisions
 - `research_runs` — Research run metadata
 

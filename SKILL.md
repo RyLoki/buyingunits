@@ -1,6 +1,6 @@
 ---
 name: buyingunits
-description: "Automated buying-unit mapping for enterprise software sales. Discovers subsidiaries, brands, divisions, and acquisitions for any company, maps product fit, and persists to Neon Postgres. Use when user wants to find buying units, map org structure, or analyze enterprise account opportunity."
+description: "Automated buying-unit mapping for enterprise software sales. Discovers subsidiaries, brands, divisions, acquisitions, and other buying units for any company and persists to Neon Postgres. Use when user wants to find buying units, map org structure, or analyze enterprise account opportunity."
 ---
 
 # Buying Units Mapper
@@ -31,7 +31,7 @@ Activate this skill when the user says any of:
 
 ### Schema
 
-Tables: `software_company`, `software_products`, `companies`, `buying_units`, `product_fit`, `review_actions`, `research_runs`
+Tables: `companies`, `buying_units`, `review_actions`, `research_runs`
 
 ## Mode Detection
 
@@ -39,37 +39,6 @@ Determine which mode to run based on user input:
 
 - **Research mode**: User provides company name(s) to analyze → discover and save buying units
 - **Query/Dashboard mode**: User asks about previously saved data → query DB and generate reports
-
----
-
-## First-Run Setup
-
-On every invocation, check if a `software_company` record exists:
-
-```sql
-SELECT id, name FROM software_company LIMIT 1;
-```
-
-If **no record exists**, run first-time setup before proceeding:
-
-1. Use **AskUserQuestion** to ask: "Which software company do you represent? I'll research your product portfolio to map product-fit against discovered buying units."
-   - Options: Let the user type their company name
-2. Research that company's product portfolio:
-   - **WebSearch** for "{company name} products", "{company name} product portfolio", "{company name} solutions"
-   - **WebFetch** the company's website (especially /products, /solutions, /platform pages)
-3. Use **AskUserQuestion** to present discovered products and ask user to confirm, remove, or add products
-4. Save to database:
-   - Insert into `software_company` (name, legal_name, website)
-   - Insert each product into `software_products` (name, category, description, target_regions)
-5. Confirm setup complete, then proceed with the original request
-
-On subsequent runs, load cached products:
-```sql
-SELECT sp.* FROM software_products sp
-JOIN software_company sc ON sp.software_company_id = sc.id;
-```
-
-If user says "refresh products" or similar, re-run the product research and update.
 
 ---
 
@@ -163,15 +132,8 @@ After all sources are queried:
 | `employee_count` | From company pages, LinkedIn data in search results |
 | `hq_location` | From GLEIF address, company website, or search results |
 | `industry_vertical` | From company description or parent industry |
-| `known_software` | Any mentions of ERP, tax, or related software |
 | `source_url` | URL where this entity was discovered |
 | `source_name` | 'SEC EDGAR', 'GLEIF', 'FMP', 'Web Search', 'Company Website' |
-
-4. **Map product fit** — For each buying unit, evaluate relevance to each cached software product:
-   - `high` — Direct match (e.g., EU subsidiary + VAT compliance product)
-   - `medium` — Potential fit (e.g., large subsidiary that likely needs the product)
-   - `low` — Tangential fit
-   - Save rationale explaining the mapping
 
 ### Step 5 — Present and Review
 
@@ -194,7 +156,7 @@ Nike, Inc. (NYSE: NKE)
 ```
 
 #### 5b. Summary Table
-Show counts by type, tax complexity highlights, and product-fit highlights in a formatted table.
+Show counts by type and tax complexity highlights in a formatted table.
 
 #### 5c. User Review
 Use **AskUserQuestion** to ask the user to review:
@@ -225,8 +187,7 @@ After user confirms:
 
 1. Insert/update `companies` record
 2. Insert all `buying_units` with full enrichment fields
-3. Insert `product_fit` mappings
-4. Record research run:
+3. Record research run:
 ```sql
 INSERT INTO research_runs (company_id, sources_queried, buying_units_found)
 VALUES ($1, $2, $3);
@@ -237,7 +198,6 @@ VALUES ($1, $2, $3);
 After all companies are reviewed and saved, show an aggregate summary:
 - Total buying units across all companies
 - Breakdown by type
-- Top product-fit opportunities
 - Tax complexity overview
 
 ---
@@ -248,7 +208,6 @@ Triggered when the user asks questions about previously saved data. Examples:
 - "which prospects have the most buying units?"
 - "show me all buying units with VAT exposure"
 - "coverage gap analysis"
-- "which buying units are best fit for {product}?"
 
 ### Capabilities
 
@@ -274,19 +233,7 @@ WHERE bu.customer_status != 'customer'
 ORDER BY c.name, bu.name;
 ```
 
-4. **Product-fit analysis**:
-```sql
-SELECT c.name as company, bu.name as buying_unit, sp.name as product,
-  pf.relevance, pf.rationale
-FROM product_fit pf
-JOIN buying_units bu ON pf.buying_unit_id = bu.id
-JOIN companies c ON bu.company_id = c.id
-JOIN software_products sp ON pf.software_product_id = sp.id
-WHERE pf.relevance = 'high'
-ORDER BY c.name, bu.name;
-```
-
-5. **Custom natural language queries** — Translate the user's question into SQL using the schema above
+4. **Custom natural language queries** — Translate the user's question into SQL using the schema above
 
 ### Output Formats
 
